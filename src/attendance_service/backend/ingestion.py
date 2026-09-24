@@ -6,17 +6,17 @@ import logging
 from collections.abc import Iterator, Sequence
 from typing import TypeVar
 
-from attendance_service.config import SyncConfig
-from attendance_service.device import PyzkDeviceReader
-from attendance_service.domain import (
+from attendance_service.backend.config import SyncConfig
+from attendance_service.backend.device import PyzkDeviceReader
+from attendance_service.backend.domain import (
     IngestionCounts,
     InvalidAttendanceEvent,
     SyncOutcome,
     ValidAttendanceEvent,
 )
-from attendance_service.logging_config import log_fields
-from attendance_service.repository import AttendanceRepository
-from attendance_service.validation import AttendanceValidator
+from attendance_service.backend.logging_config import log_fields
+from attendance_service.backend.validation import AttendanceValidator
+from attendance_service.database.repository import AttendanceRepository
 
 T = TypeVar("T")
 

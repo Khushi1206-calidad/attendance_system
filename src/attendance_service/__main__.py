@@ -1,4 +1,4 @@
-from attendance_service.cli import main
+from attendance_service.backend.cli import main
 
 raise SystemExit(main())
 

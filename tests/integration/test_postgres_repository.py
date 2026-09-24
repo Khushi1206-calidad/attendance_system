@@ -7,8 +7,8 @@ import pytest
 from alembic import command
 from alembic.config import Config as AlembicConfig
 
-from attendance_service.domain import DevicePunch, ValidAttendanceEvent
-from attendance_service.repository import AttendanceRepository
+from attendance_service.backend.domain import DevicePunch, ValidAttendanceEvent
+from attendance_service.database.repository import AttendanceRepository
 
 
 TEST_URL = os.getenv("ATTENDANCE_TEST_DATABASE_URL")

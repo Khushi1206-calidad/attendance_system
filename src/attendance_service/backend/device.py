@@ -7,10 +7,10 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from attendance_service.config import DeviceConfig, RetryConfig
-from attendance_service.domain import CapacitySnapshot, DevicePunch, DeviceSnapshot
-from attendance_service.logging_config import log_fields
-from attendance_service.retry import retry_call
+from attendance_service.backend.config import DeviceConfig, RetryConfig
+from attendance_service.backend.domain import CapacitySnapshot, DevicePunch, DeviceSnapshot
+from attendance_service.backend.logging_config import log_fields
+from attendance_service.backend.retry import retry_call
 
 
 class DeviceReadError(RuntimeError):

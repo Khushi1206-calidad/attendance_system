@@ -2,7 +2,7 @@ from datetime import datetime
 
 from openpyxl import load_workbook
 
-from attendance_service.reporting import generate_excel_report
+from attendance_service.backend.reporting import generate_excel_report
 
 
 class Repository:

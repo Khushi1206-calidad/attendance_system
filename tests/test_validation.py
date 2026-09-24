@@ -1,12 +1,12 @@
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
-from attendance_service.domain import (
+from attendance_service.backend.domain import (
     DevicePunch,
     InvalidAttendanceEvent,
     ValidAttendanceEvent,
 )
-from attendance_service.validation import AttendanceValidator
+from attendance_service.backend.validation import AttendanceValidator
 
 
 def punch(timestamp: datetime, employee_id: str = "0007") -> DevicePunch:

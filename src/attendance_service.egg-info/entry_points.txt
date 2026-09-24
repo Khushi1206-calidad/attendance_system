@@ -1,2 +1,2 @@
 [console_scripts]
-attendance-service = attendance_service.cli:main
+attendance-service = attendance_service.backend.cli:main

@@ -11,8 +11,8 @@ import psycopg
 import pytest
 from fastapi.testclient import TestClient
 
-from attendance_service.api import create_app
-from attendance_service.config import ApiConfig, DatabaseConfig
+from attendance_service.backend.api import create_app
+from attendance_service.backend.config import ApiConfig, DatabaseConfig
 
 
 READ_DATABASE_URL = os.getenv("ATTENDANCE_READ_DATABASE_URL")

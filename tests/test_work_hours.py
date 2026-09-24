@@ -1,8 +1,8 @@
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
-from attendance_service.read_models import AttendancePunch, Employee
-from attendance_service.work_hours import WorkHoursService, calculate_first_last_span
+from attendance_service.database.read_models import AttendancePunch, Employee
+from attendance_service.backend.work_hours import WorkHoursService, calculate_first_last_span
 
 
 EMPLOYEE = Employee("0137", "Khushi")

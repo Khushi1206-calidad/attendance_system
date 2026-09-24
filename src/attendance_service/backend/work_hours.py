@@ -5,13 +5,13 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from attendance_service.read_models import (
+from attendance_service.database.read_models import (
     AttendancePunch,
     AttendanceSpan,
     CalculationWarning,
     Employee,
 )
-from attendance_service.read_repository import ReadOnlyAttendanceRepository
+from attendance_service.database.read_repository import ReadOnlyAttendanceRepository
 
 CALCULATION_METHOD = "first_last_span"
 DISPLAY_LABEL = "Total attendance span (breaks included)"

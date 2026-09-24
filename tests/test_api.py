@@ -3,9 +3,9 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
-from attendance_service.api import create_app
-from attendance_service.config import ApiConfig, DatabaseConfig
-from attendance_service.read_models import AttendancePunch, Employee
+from attendance_service.backend.api import create_app
+from attendance_service.backend.config import ApiConfig, DatabaseConfig
+from attendance_service.database.read_models import AttendancePunch, Employee
 
 
 class FakeRepository:

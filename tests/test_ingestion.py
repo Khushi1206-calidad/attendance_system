@@ -3,14 +3,14 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from attendance_service.config import (
+from attendance_service.backend.config import (
     DatabaseConfig,
     DeviceConfig,
     RetryConfig,
     SyncConfig,
 )
-from attendance_service.domain import DevicePunch, DeviceSnapshot
-from attendance_service.ingestion import OneShotSynchronizer, SyncAlreadyRunning
+from attendance_service.backend.domain import DevicePunch, DeviceSnapshot
+from attendance_service.backend.ingestion import OneShotSynchronizer, SyncAlreadyRunning
 
 
 class FakeDevice:

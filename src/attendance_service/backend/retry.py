@@ -7,8 +7,8 @@ import time
 from collections.abc import Callable
 from typing import TypeVar
 
-from attendance_service.config import RetryConfig
-from attendance_service.logging_config import log_fields
+from attendance_service.backend.config import RetryConfig
+from attendance_service.backend.logging_config import log_fields
 
 T = TypeVar("T")
 

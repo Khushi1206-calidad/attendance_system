@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from psycopg_pool import ConnectionPool
 
-from attendance_service.api_schemas import (
+from attendance_service.backend.api_schemas import (
     EmployeeResponse,
     EmployeeSearchResponse,
     ErrorDetail,
@@ -28,18 +28,18 @@ from attendance_service.api_schemas import (
     WarningResponse,
     WorkHoursResponse,
 )
-from attendance_service.config import ApiConfig
-from attendance_service.logging_config import log_fields
-from attendance_service.read_repository import ReadOnlyAttendanceRepository
-from attendance_service.work_hours import (
+from attendance_service.backend.config import ApiConfig
+from attendance_service.backend.logging_config import log_fields
+from attendance_service.backend.work_hours import (
     CALCULATION_METHOD,
     DISPLAY_LABEL,
     EmployeeNotFoundError,
     WorkHoursService,
 )
+from attendance_service.database.read_repository import ReadOnlyAttendanceRepository
 
 LOGGER = logging.getLogger(__name__)
-PACKAGE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 RepositoryProvider = Callable[
     [], AbstractContextManager[ReadOnlyAttendanceRepository]
 ]
@@ -126,10 +126,10 @@ def create_app(
         lifespan=lifespan,
     )
     app.state.api_config = api_config
-    templates = Jinja2Templates(directory=str(PACKAGE_DIR / "templates"))
+    templates = Jinja2Templates(directory=str(FRONTEND_DIR / "templates"))
     app.mount(
         "/static",
-        StaticFiles(directory=str(PACKAGE_DIR / "static")),
+        StaticFiles(directory=str(FRONTEND_DIR / "static")),
         name="static",
     )
 

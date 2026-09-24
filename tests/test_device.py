@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from attendance_service.config import DeviceConfig, RetryConfig
-from attendance_service.device import PyzkDeviceReader
+from attendance_service.backend.config import DeviceConfig, RetryConfig
+from attendance_service.backend.device import PyzkDeviceReader
 
 
 class User:

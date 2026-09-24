@@ -10,7 +10,7 @@ from typing import Any
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-from attendance_service.repository import AttendanceRepository
+from attendance_service.database.repository import AttendanceRepository
 
 HEADER_FILL = PatternFill(
     start_color="1F4E78", end_color="1F4E78", fill_type="solid"

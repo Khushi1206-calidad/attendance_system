@@ -2,8 +2,8 @@ import logging
 
 import pytest
 
-from attendance_service.config import RetryConfig
-from attendance_service.retry import retry_call
+from attendance_service.backend.config import RetryConfig
+from attendance_service.backend.retry import retry_call
 
 
 def test_retry_is_bounded_and_eventually_succeeds() -> None:

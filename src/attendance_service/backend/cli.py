@@ -12,19 +12,19 @@ import psycopg
 from alembic import command
 from alembic.config import Config as AlembicConfig
 
-from attendance_service.config import (
+from attendance_service.backend.config import (
     ApiConfig,
     ConfigurationError,
     DatabaseConfig,
     SyncConfig,
     load_environment,
 )
-from attendance_service.device import DeviceReadError, PyzkDeviceReader
-from attendance_service.ingestion import OneShotSynchronizer, SyncAlreadyRunning
-from attendance_service.logging_config import configure_logging, log_fields
-from attendance_service.reporting import generate_excel_report
-from attendance_service.repository import AttendanceRepository
-from attendance_service.retry import retry_call
+from attendance_service.backend.device import DeviceReadError, PyzkDeviceReader
+from attendance_service.backend.ingestion import OneShotSynchronizer, SyncAlreadyRunning
+from attendance_service.backend.logging_config import configure_logging, log_fields
+from attendance_service.backend.reporting import generate_excel_report
+from attendance_service.backend.retry import retry_call
+from attendance_service.database.repository import AttendanceRepository
 
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
@@ -99,7 +99,7 @@ def _run_sync(config: SyncConfig, mode: str) -> None:
 
 
 def _run_migrations(database_url: str) -> None:
-    project_root = Path(__file__).resolve().parents[2]
+    project_root = Path(__file__).resolve().parents[3]
     alembic_config = AlembicConfig(str(project_root / "alembic.ini"))
     command.upgrade(alembic_config, "head")
 
@@ -135,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.output,
             )
         elif args.command == "device-test":
-            from attendance_service.config import DeviceConfig, RetryConfig
+            from attendance_service.backend.config import DeviceConfig, RetryConfig
 
             device = DeviceConfig.from_environment()
             retry = RetryConfig.from_environment()
@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
                 serial=snapshot.device_serial,
             )
         elif args.command == "capacity":
-            from attendance_service.config import DeviceConfig, RetryConfig
+            from attendance_service.backend.config import DeviceConfig, RetryConfig
 
             device = DeviceConfig.from_environment()
             retry = RetryConfig.from_environment()
@@ -174,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "web":
             import uvicorn
 
-            from attendance_service.api import create_app
+            from attendance_service.backend.api import create_app
 
             config = ApiConfig.from_environment()
             port = config.port if args.port is None else args.port

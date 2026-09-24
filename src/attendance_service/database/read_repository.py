@@ -7,7 +7,7 @@ from typing import Any
 
 from psycopg import Connection
 
-from attendance_service.read_models import AttendancePunch, Employee
+from attendance_service.database.read_models import AttendancePunch, Employee
 
 
 def _literal_ilike_pattern(value: str) -> str:

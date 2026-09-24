@@ -11,7 +11,7 @@ import psycopg
 from psycopg import Connection
 from psycopg.types.json import Jsonb
 
-from attendance_service.domain import InvalidAttendanceEvent, ValidAttendanceEvent
+from attendance_service.backend.domain import InvalidAttendanceEvent, ValidAttendanceEvent
 
 
 class AttendanceRepository:

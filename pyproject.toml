@@ -28,7 +28,7 @@ dev = [
 ]
 
 [project.scripts]
-attendance-service = "attendance_service.cli:main"
+attendance-service = "attendance_service.backend.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -37,7 +37,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-attendance_service = ["templates/*.html", "static/*.css", "static/*.js"]
+attendance_service = ["frontend/templates/*.html", "frontend/static/*.css", "frontend/static/*.js"]
 
 [tool.pytest.ini_options]
 addopts = "-ra --basetemp=.pytest-tmp"

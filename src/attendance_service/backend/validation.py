@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from attendance_service.domain import (
+from attendance_service.backend.domain import (
     DevicePunch,
     InvalidAttendanceEvent,
     ValidAttendanceEvent,
