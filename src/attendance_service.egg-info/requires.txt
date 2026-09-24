@@ -1,0 +1,15 @@
+alembic<2,>=1.13
+fastapi<1,>=0.116
+jinja2<4,>=3.1
+openpyxl<4,>=3.1
+psycopg[binary,pool]<4,>=3.2
+python-dotenv<2,>=1.0
+pyzk<1,>=0.9
+SQLAlchemy<3,>=2.0
+tzdata>=2025.2
+uvicorn<1,>=0.35
+
+[dev]
+httpx<1,>=0.28
+pytest<9,>=8.3
+pytest-cov<7,>=6

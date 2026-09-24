@@ -1,0 +1,2 @@
+[console_scripts]
+attendance-service = attendance_service.cli:main

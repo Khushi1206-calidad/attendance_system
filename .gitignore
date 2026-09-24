@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest-tmp/
+.coverage
+htmlcov/
+*.log
+attendance_report_*.xlsx
+.pgtest-runtime/
+.pgtest.log

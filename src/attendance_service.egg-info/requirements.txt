@@ -1,0 +1,11 @@
+alembic<2,>=1.13
+openpyxl<4,>=3.1
+psycopg[binary]<4,>=3.2
+python-dotenv<2,>=1.0
+pyzk<1,>=0.9
+SQLAlchemy<3,>=2.0
+tzdata>=2025.2
+
+[dev]
+pytest<9,>=8.3
+pytest-cov<7,>=6
