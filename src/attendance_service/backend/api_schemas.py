@@ -61,6 +61,40 @@ class WorkHoursResponse(BaseModel):
     warnings: list[WarningResponse]
 
 
+class DailyTotals(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    roster: int
+    present: int
+    not_in: int
+
+
+class PresentEmployeeResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    employee_id: str
+    name: str | None
+    first_punch: datetime
+    last_punch: datetime
+    punch_count: int
+    registered: bool
+
+
+class DailyAttendanceResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    source_key: str
+    date: date
+    timezone: str
+    generated_at: datetime
+    data_as_of: datetime | None
+    absence_label: str
+    totals: DailyTotals
+    present: list[PresentEmployeeResponse]
+    not_in: list[EmployeeResponse]
+    warnings: list[WarningResponse]
+
+
 class ErrorDetail(BaseModel):
     code: str
     message: str

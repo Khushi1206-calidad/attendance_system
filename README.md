@@ -154,9 +154,22 @@ Available read-only endpoints:
 ```text
 GET /api/v1/employees?query=khushi
 GET /api/v1/employees/{employee_id}/work-hours?date=YYYY-MM-DD
+GET /api/v1/attendance/daily?date=YYYY-MM-DD   (date optional, defaults to today)
 ```
 
-Both operations are restricted to `ATTENDANCE_SOURCE_KEY`. Names are searched
+The daily report (the **Summary** tab in the UI) lists who is **present**
+(at least one punch that day) and who is **not in yet** (for past dates:
+**absent**). The expected list of employees is the device's enrolled users.
+Each `sync` stores them in the `employees` table: users missing from a
+snapshot are marked inactive, and an empty user list from the device never
+deactivates anyone. People who punched but are not on that list are still
+shown as present, with an `unregistered_employees` warning. Future dates return
+`422 future_date`. The response includes `data_as_of`, the time of the last
+successful sync. The report is only as current as that sync, so schedule
+`sync` frequently during office hours (for example every 5–15 minutes). Leave,
+work-from-home, and late arrivals are not tracked.
+
+Both employee operations are restricted to `ATTENDANCE_SOURCE_KEY`. Names are searched
 case-insensitively but are not treated as identities; the selected string
 `employee_id` is used together with the source. Selected dates are interpreted
 in `ATTENDANCE_DEVICE_TIMEZONE`, and their UTC boundaries are used to query

@@ -9,7 +9,11 @@ from attendance_service.backend.config import (
     RetryConfig,
     SyncConfig,
 )
-from attendance_service.backend.domain import DevicePunch, DeviceSnapshot
+from attendance_service.backend.domain import (
+    DevicePunch,
+    DeviceSnapshot,
+    EmployeeSyncCounts,
+)
 from attendance_service.backend.ingestion import OneShotSynchronizer, SyncAlreadyRunning
 
 
@@ -53,6 +57,9 @@ class FakeRepository:
 
     def set_device_serial_if_missing(self, *_):
         pass
+
+    def sync_employees(self, _, __, users):
+        return EmployeeSyncCounts(upserted=len(users), deactivated=0)
 
     def insert_valid_events(self, _, __, events):
         inserted = 0

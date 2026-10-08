@@ -73,6 +73,91 @@ searchInput.addEventListener("input", () => {
   debounceTimer = setTimeout(searchEmployees, 250);
 });
 
+for (const tab of document.querySelectorAll(".tab")) {
+  tab.addEventListener("click", () => {
+    for (const other of document.querySelectorAll(".tab")) {
+      const active = other === tab;
+      other.classList.toggle("active", active);
+      other.setAttribute("aria-selected", String(active));
+      document.getElementById(other.dataset.tab).classList.toggle("hidden", !active);
+    }
+  });
+}
+
+const summaryDate = document.querySelector("#summary-date");
+const STALE_SYNC_MS = 60 * 60 * 1000;
+summaryDate.value = dateInput.value;
+summaryDate.max = dateInput.value;
+
+function renderPeople(list, people, withTime, timeZone) {
+  list.replaceChildren();
+  for (const person of people) {
+    const item = document.createElement("li");
+    const name = document.createElement("span");
+    name.textContent = `${person.name || "Unnamed employee"} — ${person.employee_id}`;
+    item.append(name);
+    if (withTime) {
+      const time = document.createElement("span");
+      time.className = "muted";
+      time.textContent = `in ${localTime(person.first_punch, timeZone)}` +
+        (person.registered ? "" : " · not in roster");
+      item.append(time);
+    }
+    list.append(item);
+  }
+}
+
+async function loadDailySummary() {
+  const summaryError = document.querySelector("#summary-error");
+  summaryError.textContent = "";
+  try {
+    const response = await fetch(`/api/v1/attendance/daily?date=${summaryDate.value}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || "Daily summary failed.");
+
+    const isToday = data.absence_label === "not_in_yet";
+    for (const word of document.querySelectorAll(".day-word")) {
+      word.textContent = isToday ? "today" : `on ${displayDate(data.date)}`;
+    }
+    document.querySelector("#absent-heading").firstChild.textContent = isToday ? "Not in yet " : "Absent ";
+    document.querySelector("#present-count").textContent = String(data.totals.present);
+    document.querySelector("#absent-count").textContent = String(data.totals.not_in);
+    document.querySelector("#present-empty").classList.toggle("hidden", data.present.length > 0);
+    document.querySelector("#absent-empty").textContent = isToday
+      ? "All employees are already in." : "No employee was absent.";
+    document.querySelector("#absent-empty").classList.toggle("hidden", data.not_in.length > 0);
+    renderPeople(document.querySelector("#present-list"), data.present, true, data.timezone);
+    renderPeople(document.querySelector("#absent-list"), data.not_in, false, data.timezone);
+
+    const asOf = document.querySelector("#data-as-of");
+    if (data.data_as_of) {
+      const stale = Date.now() - new Date(data.data_as_of).getTime() > STALE_SYNC_MS;
+      asOf.textContent = `Data as of ${new Intl.DateTimeFormat("en-IN", {
+        dateStyle: "medium", timeStyle: "short", timeZone: data.timezone
+      }).format(new Date(data.data_as_of))}` + (stale ? " — last sync is over an hour old" : "");
+      asOf.classList.toggle("stale", stale);
+    } else {
+      asOf.textContent = "No successful sync recorded yet.";
+      asOf.classList.add("stale");
+    }
+
+    const warningBox = document.querySelector("#summary-warnings");
+    warningBox.replaceChildren();
+    for (const warning of data.warnings) {
+      const item = document.createElement("p");
+      item.className = "warning";
+      item.textContent = warning.message;
+      warningBox.append(item);
+    }
+  } catch (error) {
+    summaryError.textContent = error.message;
+  }
+}
+
+summaryDate.addEventListener("change", loadDailySummary);
+document.querySelector("#summary-refresh").addEventListener("click", loadDailySummary);
+loadDailySummary();
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   pageError.textContent = "";

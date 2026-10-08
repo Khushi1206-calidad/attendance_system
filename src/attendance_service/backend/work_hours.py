@@ -21,6 +21,16 @@ class EmployeeNotFoundError(LookupError):
     pass
 
 
+def local_day_bounds_utc(
+    selected_date: date, timezone: ZoneInfo
+) -> tuple[datetime, datetime]:
+    start_local = datetime.combine(selected_date, time.min, tzinfo=timezone)
+    end_local = datetime.combine(
+        selected_date + timedelta(days=1), time.min, tzinfo=timezone
+    )
+    return start_local.astimezone(UTC), end_local.astimezone(UTC)
+
+
 class WorkHoursService:
     def __init__(
         self,
@@ -47,18 +57,13 @@ class WorkHoursService:
         if employee is None:
             raise EmployeeNotFoundError(employee_id)
 
-        start_local = datetime.combine(
-            selected_date, time.min, tzinfo=self._timezone
-        )
-        end_local = datetime.combine(
-            selected_date + timedelta(days=1), time.min, tzinfo=self._timezone
-        )
+        start_utc, end_utc = local_day_bounds_utc(selected_date, self._timezone)
         punches = tuple(
             self._repository.get_punches(
                 source_key=self._source_key,
                 employee_id=employee_id,
-                start_utc=start_local.astimezone(UTC),
-                end_utc=end_local.astimezone(UTC),
+                start_utc=start_utc,
+                end_utc=end_utc,
             )
         )
         return calculate_first_last_span(

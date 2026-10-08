@@ -5,7 +5,11 @@ from fastapi.testclient import TestClient
 
 from attendance_service.backend.api import create_app
 from attendance_service.backend.config import ApiConfig, DatabaseConfig
-from attendance_service.database.read_models import AttendancePunch, Employee
+from attendance_service.database.read_models import (
+    AttendancePunch,
+    DailyPresenceRow,
+    Employee,
+)
 
 
 class FakeRepository:
@@ -48,6 +52,20 @@ class FakeRepository:
     def get_employee(self, *, source_key, employee_id):
         assert source_key == "main-office-device"
         return self.employees.get(employee_id)
+
+    def get_daily_presence(self, *, source_key, start_utc, end_utc):
+        assert start_utc == datetime(2026, 9, 21, 18, 30, tzinfo=UTC)
+        return [
+            DailyPresenceRow(
+                "0137", "Khushi", True,
+                datetime(2026, 9, 22, 3, 34, tzinfo=UTC),
+                datetime(2026, 9, 22, 12, 41, tzinfo=UTC), 3,
+            ),
+            DailyPresenceRow("0999", "Khushi", True, None, None, 0),
+        ]
+
+    def get_last_successful_sync(self, *, source_key):
+        return datetime(2026, 9, 22, 12, 45, tzinfo=UTC)
 
     def get_punches(self, *, source_key, employee_id, start_utc, end_utc):
         assert source_key == "main-office-device"
@@ -141,6 +159,28 @@ def test_known_employee_with_no_attendance_returns_warning() -> None:
     assert payload["punches"] == []
     assert payload["calculated_duration"] is None
     assert payload["warnings"][0]["code"] == "no_attendance"
+
+
+def test_daily_attendance_splits_present_and_absent() -> None:
+    with client() as api:
+        response = api.get("/api/v1/attendance/daily", params={"date": "2026-09-22"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["totals"] == {"roster": 2, "present": 1, "not_in": 1}
+    assert payload["present"][0]["employee_id"] == "0137"
+    assert payload["present"][0]["first_punch"] == "2026-09-22T09:04:00+05:30"
+    assert payload["not_in"] == [{"employee_id": "0999", "name": "Khushi"}]
+    assert payload["absence_label"] == "absent"
+    assert payload["data_as_of"] is not None
+
+
+def test_daily_attendance_rejects_future_date() -> None:
+    with client() as api:
+        response = api.get("/api/v1/attendance/daily", params={"date": "2999-01-01"})
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "future_date"
 
 
 def test_html_interface_is_available() -> None:

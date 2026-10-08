@@ -11,7 +11,12 @@ import psycopg
 from psycopg import Connection
 from psycopg.types.json import Jsonb
 
-from attendance_service.backend.domain import InvalidAttendanceEvent, ValidAttendanceEvent
+from attendance_service.backend.domain import (
+    DeviceUser,
+    EmployeeSyncCounts,
+    InvalidAttendanceEvent,
+    ValidAttendanceEvent,
+)
 
 
 class AttendanceRepository:
@@ -172,6 +177,48 @@ class AttendanceRepository:
                     run_id,
                 ),
             )
+
+    def sync_employees(
+        self,
+        source_id: UUID,
+        run_id: UUID,
+        users: Iterable[DeviceUser],
+    ) -> EmployeeSyncCounts:
+        unique = {user.employee_id: user for user in users}
+        if not unique:
+            # An empty device read must never wipe the roster.
+            return EmployeeSyncCounts(upserted=0, deactivated=0)
+        rows = [
+            (source_id, user.employee_id, user.name, run_id)
+            for user in unique.values()
+        ]
+        with self.connection.transaction(), self.connection.cursor() as cursor:
+            cursor.executemany(
+                """
+                INSERT INTO employees (
+                    source_id, employee_id, name, last_sync_run_id
+                )
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (source_id, employee_id) DO UPDATE
+                SET name = EXCLUDED.name,
+                    is_active = true,
+                    last_seen_at = now(),
+                    last_sync_run_id = EXCLUDED.last_sync_run_id
+                """,
+                rows,
+            )
+            cursor.execute(
+                """
+                UPDATE employees
+                SET is_active = false
+                WHERE source_id = %s
+                  AND is_active
+                  AND NOT (employee_id = ANY(%s))
+                """,
+                (source_id, list(unique)),
+            )
+            deactivated = cursor.rowcount
+        return EmployeeSyncCounts(upserted=len(rows), deactivated=deactivated)
 
     def insert_valid_events(
         self,

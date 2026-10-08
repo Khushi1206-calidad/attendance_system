@@ -6,7 +6,7 @@ import logging
 import time
 from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, asynccontextmanager, contextmanager
-from datetime import UTC, date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, Any
 from uuid import uuid4
@@ -20,15 +20,22 @@ from fastapi.templating import Jinja2Templates
 from psycopg_pool import ConnectionPool
 
 from attendance_service.backend.api_schemas import (
+    DailyAttendanceResponse,
+    DailyTotals,
     EmployeeResponse,
     EmployeeSearchResponse,
     ErrorDetail,
     ErrorResponse,
+    PresentEmployeeResponse,
     PunchResponse,
     WarningResponse,
     WorkHoursResponse,
 )
 from attendance_service.backend.config import ApiConfig
+from attendance_service.backend.daily_report import (
+    DailyAttendanceService,
+    FutureDateError,
+)
 from attendance_service.backend.logging_config import log_fields
 from attendance_service.backend.work_hours import (
     CALCULATION_METHOD,
@@ -276,6 +283,61 @@ def create_app(
             warnings=[
                 WarningResponse(code=warning.code, message=warning.message)
                 for warning in result.warnings
+            ],
+        )
+
+    @app.get(
+        "/api/v1/attendance/daily",
+        response_model=DailyAttendanceResponse,
+        responses={422: {"model": ErrorResponse}},
+    )
+    def daily_attendance(
+        repository: Annotated[
+            ReadOnlyAttendanceRepository, Depends(get_repository)
+        ],
+        selected_date: Annotated[date | None, Query(alias="date")] = None,
+    ) -> DailyAttendanceResponse | JSONResponse:
+        timezone = api_config.device_timezone
+        service = DailyAttendanceService(
+            repository,
+            source_key=api_config.source_key,
+            device_timezone=timezone,
+        )
+        try:
+            report = service.build(selected_date or service.today())
+        except FutureDateError:
+            return _error(422, "future_date", "The selected date is in the future.")
+
+        return DailyAttendanceResponse(
+            source_key=report.source_key,
+            date=report.selected_date,
+            timezone=report.timezone_name,
+            generated_at=datetime.now(UTC),
+            data_as_of=report.data_as_of,
+            absence_label=report.absence_label,
+            totals=DailyTotals(
+                roster=report.roster_count,
+                present=len(report.present),
+                not_in=len(report.not_in),
+            ),
+            present=[
+                PresentEmployeeResponse(
+                    employee_id=row.employee_id,
+                    name=row.name,
+                    first_punch=row.first_punch_utc.astimezone(timezone),
+                    last_punch=row.last_punch_utc.astimezone(timezone),
+                    punch_count=row.punch_count,
+                    registered=row.in_roster,
+                )
+                for row in report.present
+            ],
+            not_in=[
+                EmployeeResponse(employee_id=row.employee_id, name=row.name)
+                for row in report.not_in
+            ],
+            warnings=[
+                WarningResponse(code=warning.code, message=warning.message)
+                for warning in report.warnings
             ],
         )
 

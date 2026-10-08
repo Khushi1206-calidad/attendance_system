@@ -80,6 +80,17 @@ class OneShotSynchronizer:
             self._repository.set_device_serial_if_missing(
                 source_id, snapshot.device_serial
             )
+            employee_counts = self._repository.sync_employees(
+                source_id, run_id, snapshot.users
+            )
+            if not snapshot.users:
+                log_fields(
+                    self._logger,
+                    logging.WARNING,
+                    "employee_roster_empty_snapshot",
+                    run_id=run_id,
+                    source_key=self._config.source_key,
+                )
             validator = AttendanceValidator(
                 minimum_valid_timestamp=self._config.minimum_valid_timestamp,
                 max_future_seconds=self._config.max_future_seconds,
@@ -133,6 +144,8 @@ class OneShotSynchronizer:
                 inserted=counts.inserted,
                 invalid_inserted=counts.invalid_inserted,
                 duplicates=counts.received - counts.inserted - counts.invalid_inserted,
+                employees_upserted=employee_counts.upserted,
+                employees_deactivated=employee_counts.deactivated,
             )
             return SyncOutcome(run_id=run_id, mode=mode, counts=counts)
         except Exception as exc:

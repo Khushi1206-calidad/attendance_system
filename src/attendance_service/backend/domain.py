@@ -32,10 +32,23 @@ class InvalidAttendanceEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class DeviceUser:
+    employee_id: str
+    name: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class DeviceSnapshot:
     punches: tuple[DevicePunch, ...]
     user_count: int
     device_serial: str | None
+    users: tuple[DeviceUser, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class EmployeeSyncCounts:
+    upserted: int
+    deactivated: int
 
 
 @dataclass(frozen=True, slots=True)

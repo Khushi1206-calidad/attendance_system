@@ -21,6 +21,16 @@ class AttendancePunch:
 
 
 @dataclass(frozen=True, slots=True)
+class DailyPresenceRow:
+    employee_id: str
+    name: str | None
+    in_roster: bool
+    first_punch_utc: datetime | None
+    last_punch_utc: datetime | None
+    punch_count: int
+
+
+@dataclass(frozen=True, slots=True)
 class CalculationWarning:
     code: str
     message: str
