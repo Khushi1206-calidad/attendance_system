@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -53,6 +54,18 @@ def _float(name: str, default: float, *, minimum: float = 0.0) -> float:
     if value < minimum:
         raise ConfigurationError(f"{name} must be at least {minimum}")
     return value
+
+
+_TIME_OF_DAY = re.compile(r"([01]\d|2[0-3]):([0-5]\d)")
+
+
+def _time_of_day(name: str, default: str) -> time:
+    """Parse a strict 24-hour ``HH:MM`` setting."""
+    raw = os.getenv(name, default).strip()
+    match = _TIME_OF_DAY.fullmatch(raw)
+    if match is None:
+        raise ConfigurationError(f"{name} must be a 24-hour time in HH:MM format")
+    return time(int(match[1]), int(match[2]))
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +144,7 @@ class SyncConfig:
     minimum_valid_timestamp: datetime
     max_future_seconds: int
     batch_size: int
+    lookback_seconds: int
 
     @classmethod
     def from_environment(cls) -> "SyncConfig":
@@ -156,6 +170,9 @@ class SyncConfig:
                 "ATTENDANCE_MAX_FUTURE_SECONDS", 86400, minimum=0
             ),
             batch_size=_integer("ATTENDANCE_BATCH_SIZE", 1000, minimum=1),
+            lookback_seconds=_integer(
+                "ATTENDANCE_SYNC_LOOKBACK_SECONDS", 86400, minimum=0
+            ),
         )
 
 
@@ -165,6 +182,7 @@ class ApiConfig:
     source_key: str
     device_timezone_name: str
     unreasonable_span_seconds: int
+    working_day_cutoff: time
     host: str
     port: int
     pool_min_size: int
@@ -187,6 +205,9 @@ class ApiConfig:
             device_timezone_name=_required("ATTENDANCE_DEVICE_TIMEZONE"),
             unreasonable_span_seconds=_integer(
                 "ATTENDANCE_UNREASONABLE_SPAN_SECONDS", 64800, minimum=1
+            ),
+            working_day_cutoff=_time_of_day(
+                "ATTENDANCE_WORKING_DAY_CUTOFF", "06:00"
             ),
             host=os.getenv("ATTENDANCE_API_HOST", "127.0.0.1"),
             port=_integer("ATTENDANCE_API_PORT", 8000, minimum=1),

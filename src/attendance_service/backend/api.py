@@ -85,6 +85,7 @@ def _service(
         source_key=config.source_key,
         device_timezone=config.device_timezone,
         unreasonable_span_seconds=config.unreasonable_span_seconds,
+        working_day_cutoff=config.working_day_cutoff,
     )
 
 
@@ -280,6 +281,9 @@ def create_app(
             calculated_duration_seconds=result.duration_seconds,
             calculated_duration=_duration_label(result.duration_seconds),
             breaks_excluded=False,
+            working_day_cutoff=api_config.working_day_cutoff.strftime("%H:%M"),
+            window_start=result.window_start.astimezone(timezone),
+            window_end=result.window_end.astimezone(timezone),
             warnings=[
                 WarningResponse(code=warning.code, message=warning.message)
                 for warning in result.warnings
@@ -302,9 +306,11 @@ def create_app(
             repository,
             source_key=api_config.source_key,
             device_timezone=timezone,
+            working_day_cutoff=api_config.working_day_cutoff,
         )
+        current_working_day = service.today()
         try:
-            report = service.build(selected_date or service.today())
+            report = service.build(selected_date or current_working_day)
         except FutureDateError:
             return _error(422, "future_date", "The selected date is in the future.")
 
@@ -335,6 +341,10 @@ def create_app(
                 EmployeeResponse(employee_id=row.employee_id, name=row.name)
                 for row in report.not_in
             ],
+            working_day_cutoff=api_config.working_day_cutoff.strftime("%H:%M"),
+            current_working_day=current_working_day,
+            window_start=report.window_start.astimezone(timezone),
+            window_end=report.window_end.astimezone(timezone),
             warnings=[
                 WarningResponse(code=warning.code, message=warning.message)
                 for warning in report.warnings

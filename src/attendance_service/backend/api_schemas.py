@@ -58,6 +58,9 @@ class WorkHoursResponse(BaseModel):
     calculated_duration_seconds: int | None
     calculated_duration: str | None
     breaks_excluded: bool
+    working_day_cutoff: str
+    window_start: datetime
+    window_end: datetime
     warnings: list[WarningResponse]
 
 
@@ -92,6 +95,10 @@ class DailyAttendanceResponse(BaseModel):
     totals: DailyTotals
     present: list[PresentEmployeeResponse]
     not_in: list[EmployeeResponse]
+    working_day_cutoff: str
+    current_working_day: date
+    window_start: datetime
+    window_end: datetime
     warnings: list[WarningResponse]
 
 

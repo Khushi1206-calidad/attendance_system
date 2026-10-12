@@ -10,18 +10,29 @@ const pageError = document.querySelector("#page-error");
 let selectedEmployee = null;
 let debounceTimer = null;
 
-const today = new Date();
-dateInput.value = [
-  today.getFullYear(),
-  String(today.getMonth() + 1).padStart(2, "0"),
-  String(today.getDate()).padStart(2, "0")
-].join("-");
-
 function localTime(value, timeZone) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("en-IN", {
     hour: "2-digit", minute: "2-digit", hour12: false, timeZone
   }).format(new Date(value));
+}
+
+// Same as localTime, but prefixes the day when it differs from the working day
+// (after-midnight punches belong to the previous working day).
+function punchTime(value, workingDay, timeZone) {
+  if (!value) return "—";
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date(value));
+  if (day === workingDay) return localTime(value, timeZone);
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone
+  }).format(new Date(value));
+}
+
+function windowLabel(start, end, timeZone) {
+  const format = new Intl.DateTimeFormat("en-IN", {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone
+  });
+  return `${format.format(new Date(start))} – ${format.format(new Date(end))}`;
 }
 
 function displayDate(value) {
@@ -86,10 +97,8 @@ for (const tab of document.querySelectorAll(".tab")) {
 
 const summaryDate = document.querySelector("#summary-date");
 const STALE_SYNC_MS = 60 * 60 * 1000;
-summaryDate.value = dateInput.value;
-summaryDate.max = dateInput.value;
 
-function renderPeople(list, people, withTime, timeZone) {
+function renderPeople(list, people, withTime, timeZone, workingDay) {
   list.replaceChildren();
   for (const person of people) {
     const item = document.createElement("li");
@@ -99,7 +108,7 @@ function renderPeople(list, people, withTime, timeZone) {
     if (withTime) {
       const time = document.createElement("span");
       time.className = "muted";
-      time.textContent = `in ${localTime(person.first_punch, timeZone)}` +
+      time.textContent = `in ${punchTime(person.first_punch, workingDay, timeZone)}` +
         (person.registered ? "" : " · not in roster");
       item.append(time);
     }
@@ -111,9 +120,16 @@ async function loadDailySummary() {
   const summaryError = document.querySelector("#summary-error");
   summaryError.textContent = "";
   try {
-    const response = await fetch(`/api/v1/attendance/daily?date=${summaryDate.value}`);
+    const query = summaryDate.value ? `?date=${summaryDate.value}` : "";
+    const response = await fetch(`/api/v1/attendance/daily${query}`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || "Daily summary failed.");
+    // The server decides the current working day (before the cutoff it is still yesterday).
+    summaryDate.max = data.current_working_day;
+    if (!summaryDate.value) summaryDate.value = data.date;
+    if (!dateInput.value) dateInput.value = data.current_working_day;
+    document.querySelector("#summary-window").textContent =
+      `Counted window: ${windowLabel(data.window_start, data.window_end, data.timezone)}`;
 
     const isToday = data.absence_label === "not_in_yet";
     for (const word of document.querySelectorAll(".day-word")) {
@@ -126,8 +142,8 @@ async function loadDailySummary() {
     document.querySelector("#absent-empty").textContent = isToday
       ? "All employees are already in." : "No employee was absent.";
     document.querySelector("#absent-empty").classList.toggle("hidden", data.not_in.length > 0);
-    renderPeople(document.querySelector("#present-list"), data.present, true, data.timezone);
-    renderPeople(document.querySelector("#absent-list"), data.not_in, false, data.timezone);
+    renderPeople(document.querySelector("#present-list"), data.present, true, data.timezone, data.date);
+    renderPeople(document.querySelector("#absent-list"), data.not_in, false, data.timezone, data.date);
 
     const asOf = document.querySelector("#data-as-of");
     if (data.data_as_of) {
@@ -170,8 +186,10 @@ form.addEventListener("submit", async (event) => {
     if (!response.ok) throw new Error(data.error?.message || "Attendance lookup failed.");
     document.querySelector("#result-employee").textContent = `${data.name || "Unnamed employee"} — ${data.employee_id}`;
     document.querySelector("#result-date").textContent = displayDate(data.date);
-    document.querySelector("#first-punch").textContent = localTime(data.first_punch, data.timezone);
-    document.querySelector("#last-punch").textContent = localTime(data.last_punch, data.timezone);
+    document.querySelector("#result-window").textContent =
+      windowLabel(data.window_start, data.window_end, data.timezone);
+    document.querySelector("#first-punch").textContent = punchTime(data.first_punch, data.date, data.timezone);
+    document.querySelector("#last-punch").textContent = punchTime(data.last_punch, data.date, data.timezone);
     document.querySelector("#attendance-span").textContent = data.calculated_duration || "Not available";
     document.querySelector("#punch-count").textContent = String(data.punch_count);
 
@@ -188,7 +206,7 @@ form.addEventListener("submit", async (event) => {
     punchList.replaceChildren();
     for (const punch of data.punches) {
       const row = document.createElement("tr");
-      for (const value of [localTime(punch.timestamp_local, data.timezone), punch.status_raw ?? "—", punch.punch_raw ?? "—"]) {
+      for (const value of [punchTime(punch.timestamp_local, data.date, data.timezone), punch.status_raw ?? "—", punch.punch_raw ?? "—"]) {
         const cell = document.createElement("td");
         cell.textContent = value;
         row.append(cell);

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from contextlib import AbstractContextManager
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -110,6 +111,23 @@ class AttendanceRepository:
                 (f"attendance-service:{self._locked_source_key}",),
             )
         self._locked_source_key = None
+
+    def atomic(self) -> AbstractContextManager[Any]:
+        """One transaction; nested repository writes become savepoints."""
+        return self.connection.transaction()
+
+    def latest_valid_device_timestamp(self, source_id: UUID) -> datetime | None:
+        """Newest stored valid punch (device-local, naive), or None if empty."""
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT max(original_device_timestamp)
+                FROM attendance_events
+                WHERE source_id = %s
+                """,
+                (source_id,),
+            )
+            return cursor.fetchone()[0]
 
     def source_has_records(self, source_id: UUID) -> bool:
         with self.connection.cursor() as cursor:

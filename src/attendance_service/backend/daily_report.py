@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from zoneinfo import ZoneInfo
 
-from attendance_service.backend.work_hours import local_day_bounds_utc
+from attendance_service.backend.work_hours import (
+    local_day_bounds_utc,
+    working_day_for,
+)
 from attendance_service.database.read_models import (
     CalculationWarning,
     DailyPresenceRow,
@@ -29,6 +32,8 @@ class DailyAttendanceReport:
     not_in: tuple[DailyPresenceRow, ...]
     data_as_of: datetime | None
     warnings: tuple[CalculationWarning, ...]
+    window_start: datetime
+    window_end: datetime
 
 
 def classify_daily_presence(
@@ -77,13 +82,18 @@ class DailyAttendanceService:
         *,
         source_key: str,
         device_timezone: ZoneInfo,
+        working_day_cutoff: time = time.min,
     ) -> None:
         self._repository = repository
         self._source_key = source_key
         self._timezone = device_timezone
+        self._cutoff = working_day_cutoff
 
     def today(self, now_utc: datetime | None = None) -> date:
-        return (now_utc or datetime.now(UTC)).astimezone(self._timezone).date()
+        """Return the current working day (yesterday until the cutoff passes)."""
+        return working_day_for(
+            now_utc or datetime.now(UTC), self._timezone, self._cutoff
+        )
 
     def build(
         self, selected_date: date, *, now_utc: datetime | None = None
@@ -91,7 +101,9 @@ class DailyAttendanceService:
         today_local = self.today(now_utc)
         if selected_date > today_local:
             raise FutureDateError(selected_date)
-        start_utc, end_utc = local_day_bounds_utc(selected_date, self._timezone)
+        start_utc, end_utc = local_day_bounds_utc(
+            selected_date, self._timezone, self._cutoff
+        )
         rows = self._repository.get_daily_presence(
             source_key=self._source_key, start_utc=start_utc, end_utc=end_utc
         )
@@ -110,4 +122,6 @@ class DailyAttendanceService:
                 source_key=self._source_key
             ),
             warnings=warnings,
+            window_start=start_utc,
+            window_end=end_utc,
         )

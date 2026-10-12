@@ -69,6 +69,7 @@ class IngestionCounts:
     invalid: int
     inserted: int
     invalid_inserted: int
+    skipped_older: int = 0
 
 
 @dataclass(frozen=True, slots=True)

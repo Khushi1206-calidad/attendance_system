@@ -47,4 +47,6 @@ class AttendanceSpan:
     last_punch: datetime | None
     duration_seconds: int | None
     warnings: tuple[CalculationWarning, ...]
+    window_start: datetime | None = None
+    window_end: datetime | None = None
 

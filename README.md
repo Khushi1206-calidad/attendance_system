@@ -87,6 +87,16 @@ retries. The command always exits after the configured maximum attempts.
 Each acquired synchronization is recorded in `attendance_sync_runs` as
 `running`, `succeeded`, or `failed` where the database remains reachable.
 
+The device protocol always returns the full attendance log, so each run still
+downloads every record. Only punches newer than the newest stored valid punch
+minus `ATTENDANCE_SYNC_LOOKBACK_SECONDS` (default 86400) are written; older ones
+are counted as `skipped_older`. The first run has no stored punch and backfills
+everything. The roster update and all inserts of a run share one database
+transaction, so a failed run writes no attendance rows (its `failed` audit row is
+still kept). Each run logs `sync_started`, then `sync_succeeded` (`fetched`,
+`skipped_older`, `inserted`, `invalid_inserted`, `duplicates`, `duration_ms`) or
+`sync_failed` (`error`, `duration_ms`) as JSON lines.
+
 ## External scheduling
 
 Scheduling time and frequency are deliberately not configured in Python.
@@ -103,14 +113,20 @@ Use a dedicated low-privilege account, select an appropriate fixed trigger,
 and configure the task not to start a new instance when one is already running.
 The PostgreSQL advisory lock remains the final overlap protection.
 
-Equivalent command-line example for a daily 23:55 trigger:
+Every 5 minutes, from an elevated PowerShell (`/RU SYSTEM` runs it whether or
+not anyone is logged on; use a dedicated account with `/RU <user> /RP` instead
+if preferred):
 
 ```powershell
-schtasks /Create /SC DAILY /ST 23:55 /TN "Attendance PostgreSQL Sync" /TR "D:\attendance-automation\.venv\Scripts\attendance-service.exe --env-file D:\attendance-automation\.env sync --mode scheduled"
+schtasks /Create /SC MINUTE /MO 5 /TN "Attendance PostgreSQL Sync" /RU SYSTEM /TR "\"D:\attendance-automation\.venv\Scripts\attendance-service.exe\" --env-file \"D:\attendance-automation\.env\" sync --mode scheduled"
+schtasks /Run /TN "Attendance PostgreSQL Sync"
+schtasks /Query /TN "Attendance PostgreSQL Sync" /V /FO LIST
 ```
 
-The time above is only an example for Task Scheduler; it is not an application
-default.
+A task created by `schtasks` defaults to "Do not start a new instance" if the
+previous run is still going. To keep a log file, point `/TR` at a wrapper such
+as `cmd /c "... sync --mode scheduled >> D:\attendance-automation\sync.log 2>&1"`.
+The interval is only an example; it is not an application default.
 
 ### cron
 
@@ -154,7 +170,7 @@ Available read-only endpoints:
 ```text
 GET /api/v1/employees?query=khushi
 GET /api/v1/employees/{employee_id}/work-hours?date=YYYY-MM-DD
-GET /api/v1/attendance/daily?date=YYYY-MM-DD   (date optional, defaults to today)
+GET /api/v1/attendance/daily?date=YYYY-MM-DD   (date optional, defaults to the current working day)
 ```
 
 The daily report (the **Summary** tab in the UI) lists who is **present**
@@ -171,9 +187,22 @@ work-from-home, and late arrivals are not tracked.
 
 Both employee operations are restricted to `ATTENDANCE_SOURCE_KEY`. Names are searched
 case-insensitively but are not treated as identities; the selected string
-`employee_id` is used together with the source. Selected dates are interpreted
-in `ATTENDANCE_DEVICE_TIMEZONE`, and their UTC boundaries are used to query
-`occurred_at_utc`.
+`employee_id` is used together with the source.
+
+A selected date D is a **working day**: from D at `ATTENDANCE_WORKING_DAY_CUTOFF`
+(default `06:00`) to D+1 at the same time, in `ATTENDANCE_DEVICE_TIMEZONE`.
+Its UTC boundaries are used to query `occurred_at_utc`. Night-shift punches after
+midnight (for example 00:48) are therefore counted toward the previous day.
+Both ends are built from local wall-clock time, so daylight-saving days are 23
+or 25 hours long. `00:00` gives plain calendar days (the previous behaviour).
+Before the cutoff, "today" is still the previous working day. Both endpoints
+return `working_day_cutoff`, `window_start` and `window_end`, and the UI shows
+the counted window. Limitations:
+
+- A shift that runs past the cutoff (for example 22:00 → 07:00) is split across
+  two working days; this needs shift definitions to resolve.
+- Results are computed on read, so changing the cutoff changes every past day as
+  well. Previously exported figures will no longer match.
 
 The calculation method is `first_last_span`, displayed as **Total attendance
 span (breaks included)**:
